@@ -60,6 +60,73 @@ async function onButtonClickedAsync(tab) {
   }
   console.log(LOG_PREFIX, "Opened abstract / PDF page in existing / new tab.");
 }
+
+//   if (!referrerUrl || referrerUrl.includes('://arxiv.org/abs/')) {
+  //   return;
+  // }
+
+function sanitizeFilename(name) {
+  const invalidCharsRegex = /[\\/:*?"<>|]/g;
+  let sanitized = name.replace(invalidCharsRegex, '');
+  sanitized = sanitized.replace(/\s+/g, ' ').trim();
+  if (!sanitized) {
+    sanitized = 'download';
+  }
+  return sanitized;
+}
+
+chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
+  console.log(`${LOG_PREFIX} Download initiated: ${downloadItem.url}`);
+  console.log(`${LOG_PREFIX} MIME type: ${downloadItem.mime}`);
+
+  if (downloadItem.mime !== 'application/pdf') {
+    console.log(`${LOG_PREFIX} MIME type is not 'application/pdf'. Exiting.`);
+    return; // This is fine, we are not calling suggest.
+  }
+
+  // --- Helper function (defined earlier for clarity) ---
+  function processTab(tab) {
+    let tabTitle = tab.title;
+    if (tabTitle.endsWith(' | PDF')) {
+      tabTitle = tabTitle.slice(0, -6).trim();
+    }
+    const sanitizedTitle = sanitizeFilename(tabTitle) // Assuming you have this function
+    let newFilename;
+    if (sanitizedTitle.endsWith('.pdf')) {
+      newFilename = sanitizedTitle;
+    }
+    else {
+      newFilename = `${sanitizedTitle}.pdf`;
+    }
+
+    console.log(`${LOG_PREFIX} Suggesting new filename: "${newFilename}"`);
+    suggest({
+      filename: newFilename
+    });
+    console.log(`${LOG_PREFIX} Filename suggestion completed.`);
+  }
+
+  // --- Main Async Logic ---
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (chrome.runtime.lastError || !tabs || tabs.length === 0) {
+      console.error(`${LOG_PREFIX} Could not get the active tab. Giving up.`);
+      // We can't get a title, so we must call suggest() with no arguments
+      // to tell Chrome to just use the default filename.
+      // NOT calling it would leave the download hanging.
+      suggest();
+      return;
+    }
+    const activeTab = tabs[0];
+    console.log(`${LOG_PREFIX} Using active tab: "${activeTab.title}"`);
+    processTab(activeTab);
+    // The 'return true' here inside the query callback does nothing.
+  });
+
+  // 👇 THIS IS THE CRITICAL FIX
+  // Tell Chrome to wait for our async suggest() call.
+  return true;
+});
+
 async function onMessage(message) {
   await chrome.downloads.download({
     url: message.url,

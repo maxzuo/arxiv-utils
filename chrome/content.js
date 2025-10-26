@@ -7,6 +7,8 @@ const ID_REGEXP_REPLACE = [
   [/^.*:\/\/(?:export\.|browse\.|www\.)?arxiv\.org\/pdf\/(\S*?)(?:\.pdf)?\/*(\?.*?)?(\#.*?)?$/, "$1", "PDF"],
   [/^.*:\/\/(?:export\.|browse\.|www\.)?arxiv\.org\/ftp\/(?:arxiv\/|([^\/]*\/))papers\/.*?([^\/]*?)\.pdf(\?.*?)?(\#.*?)?$/, "$1$2", "PDF"],
   [/^.*:\/\/ar5iv\.labs\.arxiv\.org\/html\/(\S*?)\/*(\?.*?)?(\#.*?)?$/, "$1", "HTML5"],
+  // CVF
+  // [/^.*:\/\/openaccess\.thecvf\.com\/(.*?)\/papers\/(.*?)\.pdf.*$/, "$1 - $2", "PDF"],
 ];
 // Store new title for onMessage to deal with Chrome PDF viewer bug.
 var newTitle = undefined;
@@ -194,18 +196,55 @@ async function onMessageAsync(tab, sender, sendResponse) {
   console.error(LOG_PREFIX, "Error: Cannot insert title");
 }
 
+/**
+ * Main asynchronous function to set the tab title after the PDF loads.
+ */
+async function setTabTitleFromPdf() {
+  try {
+    // 1. Get the path to the web-accessible PDF.js library
+    const pdfjsLibPath = chrome.runtime.getURL('./pdf.mjs');
+    const workerSrcPath = chrome.runtime.getURL('./pdf.worker.mjs');
+
+    // 2. Dynamically import the library (this works in a content script)
+    const pdfjsLib = await import(pdfjsLibPath);
+    pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrcPath;
+
+    // 3. Get the URL of the current document (we're in the tab, so we have 'window')
+    const url = window.location.href;
+
+    // 4. Fetch and parse the PDF
+    const loadingTask = pdfjsLib.getDocument(url);
+    const pdf = await loadingTask.promise;
+
+    // 5. Get metadata
+    const metadata = await pdf.getMetadata();
+    const metadataTitle = metadata.info?.Title;
+
+    // 6. Set the document title!
+    if (metadataTitle && metadataTitle.trim() !== '') {
+      document.title = metadataTitle;
+    }
+  } catch (error) {
+    console.error('PDF Title Updater Error:', error);
+  }
+}
+
 async function mainAsync() {
+
   console.log(LOG_PREFIX, "Extension initialized.");
   const url = location.href;
   const pageType = getPageType(url);
   const id = getId(url);
   if (!id) {
     console.error(LOG_PREFIX, "Error: Failed to get paper ID, aborted.");
+    // at least try to set title from PDF metadata if it's a PDF page
+    await setTabTitleFromPdf();
     return;
   }
   if (pageType === "Abstract")
     addCustomLinksAsync(id);
   const articleInfo = await getArticleInfoAsync(id, pageType);
+
   document.title = articleInfo.newTitle;
   console.log(LOG_PREFIX, `Set document title to: ${articleInfo.newTitle}.`);
   if (pageType === "Abstract")

@@ -6,21 +6,39 @@
     "service_worker": "background.js",
     "type": "module"
   },
-  "content_scripts": [{
-    "matches": [
-      "*://arxiv.org/*pdf*",
-      "*://arxiv.org/abs/*",
-      "*://export.arxiv.org/*pdf*",
-      "*://export.arxiv.org/abs/*",
-      "*://browse.arxiv.org/*pdf*",
-      "*://browse.arxiv.org/abs/*",
-      "*://www.arxiv.org/*pdf*",
-      "*://www.arxiv.org/abs/*",
-      "*://ar5iv.labs.arxiv.org/html/*"
-    ],
-    "js": [ "content.js" ],
-    "run_at": "document_end"
-  }],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://arxiv.org/*pdf*",
+        "*://arxiv.org/abs/*",
+        "*://export.arxiv.org/*pdf*",
+        "*://export.arxiv.org/abs/*",
+        "*://browse.arxiv.org/*pdf*",
+        "*://browse.arxiv.org/abs/*",
+        "*://www.arxiv.org/*pdf*",
+        "*://www.arxiv.org/abs/*",
+        "*://ar5iv.labs.arxiv.org/html/*",
+        "*://openaccess.thecvf.com/*/papers/*",
+        "*://www.jmlr.org/papers/*",
+        "*://aclanthology.org/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "pdf.worker.mjs",
+        "pdf.mjs"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
   "action": {
     "default_icon": {
       "19": "icon19.png",
@@ -44,11 +62,7 @@
     "downloads"
   ],
   "host_permissions": [
-    "*://arxiv.org/*",
-    "*://export.arxiv.org/*",
-    "*://browse.arxiv.org/*",
-    "*://www.arxiv.org/*",
-    "*://ar5iv.labs.arxiv.org/*"
+    "<all_urls>"
   ],
   "icons": {
     "16": "icon16.png",
