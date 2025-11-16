@@ -20,7 +20,9 @@
         "*://ar5iv.labs.arxiv.org/html/*",
         "*://openaccess.thecvf.com/*/papers/*",
         "*://www.jmlr.org/papers/*",
-        "*://aclanthology.org/*"
+        "*://aclanthology.org/*",
+        "*://openreview.net/forum*",
+        "*://openreview.net/pdf*"
       ],
       "js": [
         "content.js"

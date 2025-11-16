@@ -223,6 +223,9 @@ async function setTabTitleFromPdf() {
     // 6. Set the document title!
     if (metadataTitle && metadataTitle.trim() !== '') {
       document.title = metadataTitle;
+      console.log(LOG_PREFIX, `Set PDF document title to: ${metadataTitle}.`);
+    } else {
+      console.log(LOG_PREFIX, "Empty or missing PDF title metadata.");
     }
   } catch (error) {
     console.error('PDF Title Updater Error:', error);
@@ -235,10 +238,10 @@ async function mainAsync() {
   const url = location.href;
   const pageType = getPageType(url);
   const id = getId(url);
+  await setTabTitleFromPdf();
   if (!id) {
     console.error(LOG_PREFIX, "Error: Failed to get paper ID, aborted.");
     // at least try to set title from PDF metadata if it's a PDF page
-    await setTabTitleFromPdf();
     return;
   }
   if (pageType === "Abstract")
